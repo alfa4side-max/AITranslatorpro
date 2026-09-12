@@ -30,9 +30,25 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      - name: Fix Java and Kotlin JVM target
+        working-directory: source
+        run: |
+          find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" \) -print0 | xargs -0 sed -i \
+            -e 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' \
+            -e 's/jvmTarget = "1.8"/jvmTarget = "17"/g' \
+            -e 's/sourceCompatibility = 1.8/sourceCompatibility = 17/g' \
+            -e 's/targetCompatibility = 1.8/targetCompatibility = 17/g'
+
+      - name: Show Java configuration
+        working-directory: source
+        run: |
+          java -version
+          grep -R "VERSION_1_8\|jvmTarget.*1.8" -n . --include="*.gradle" --include="*.gradle.kts" || true
+
       - name: Build APK
         working-directory: source
-        run: gradle --no-daemon assembleDebug
+        run: |
+          gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
