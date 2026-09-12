@@ -16,42 +16,42 @@ jobs:
 
       - name: Extract AI Translator project
         run: |
-          mkdir source
+          mkdir -p source
           unzip -q AITranslator-FINAL-GitHub-Upload.zip -d source
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.10.2"
+          gradle-version: '8.10.2'
 
       - name: Fix Java and Kotlin JVM target
         working-directory: source
         run: |
-          find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" \) -print0 | xargs -0 sed -i \
-            -e 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' \
-            -e 's/jvmTarget = "1.8"/jvmTarget = "17"/g' \
-            -e 's/sourceCompatibility = 1.8/sourceCompatibility = 17/g' \
-            -e 's/targetCompatibility = 1.8/targetCompatibility = 17/g'
-
-      - name: Show Java configuration
-        working-directory: source
-        run: |
-          java -version
-          grep -R "VERSION_1_8\|jvmTarget.*1.8" -n . --include="*.gradle" --include="*.gradle.kts" || true
+          find . -name "*.gradle" -o -name "*.gradle.kts" | while read file; do
+            sed -i 's/sourceCompatibility = JavaVersion.VERSION_1_8/sourceCompatibility = JavaVersion.VERSION_17/g' "$file"
+            sed -i 's/targetCompatibility = JavaVersion.VERSION_1_8/targetCompatibility = JavaVersion.VERSION_17/g' "$file"
+            sed -i 's/jvmTarget = "[0-9.]*"/jvmTarget = "17"/g' "$file"
+            sed -i 's/jvmTarget = '\''[0-9.]*'\''/jvmTarget = '\''17'\''/g' "$file"
+          done
 
       - name: Build APK
         working-directory: source
         run: |
-          gradle --no-daemon assembleDebug
+          gradle --no-daemon clean assembleDebug
+
+      - name: Find APK
+        run: |
+          find source -type f -name "*.apk" -print
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AITranslator-APK
-          path: source/app/build/outputs/apk/debug/app-debug.apk
+          path: source/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
